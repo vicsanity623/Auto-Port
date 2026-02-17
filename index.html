@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Ensure viewport-fit=cover is present for env() to work -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DevQuest Auto-Port</title>
     
@@ -39,11 +38,8 @@
 
         /* --- HEADER FIXED --- */
         header {
-            /* 60px PLUS the notch height */
             height: calc(60px + env(safe-area-inset-top));
-            /* Push content down by the notch height */
             padding-top: env(safe-area-inset-top); 
-            
             background: var(--header-bg);
             border-bottom: var(--border);
             display: flex;
@@ -83,25 +79,46 @@
 
         /* --- SIDEBAR FIXED --- */
         #sidebar {
-            width: 220px;
+            width: 240px;
             background: #0a0a0e;
             border-right: var(--border);
             display: flex;
             flex-direction: column;
-            
-            /* Add padding so "Project Files" isn't hidden by the notch if sidebar is tall */
             padding-top: calc(10px + env(safe-area-inset-top)); 
-            
             transition: transform 0.3s ease;
             position: absolute;
             z-index: 100;
             height: 100%;
-            top: 0; /* Ensures it covers the top notch area */
+            top: 0;
             transform: translateX(-100%);
         }
         #sidebar.open { transform: translateX(0); }
         
-        .sidebar-header { padding: 10px 16px; font-weight: bold; color: #666; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;}
+        .sidebar-header { 
+            padding: 10px 16px; 
+            font-weight: bold; 
+            color: #666; 
+            font-size: 11px; 
+            letter-spacing: 1px; 
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-add {
+            background: #1f1f2e;
+            border: 1px solid #333;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+        }
         
         .file-item {
             padding: 12px 16px;
@@ -110,11 +127,13 @@
             cursor: pointer;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 8px;
             border-left: 2px solid transparent;
         }
         .file-item:hover { background: #1f1f2e; }
         .file-item.active { background: #161622; color: #fff; border-left-color: var(--accent); }
+        .file-name { display: flex; align-items: center; gap: 8px; }
         
         .icon-html { color: #e44d26; }
         .icon-css { color: #264de4; }
@@ -150,8 +169,6 @@
             flex-direction: column;
             border-top: var(--border);
             position: relative;
-            
-            /* Add padding for the Home Swipe Bar */
             padding-bottom: env(safe-area-inset-bottom);
         }
 
@@ -159,7 +176,7 @@
             display: flex;
             background: #111;
             border-bottom: 1px solid #333;
-            flex-shrink: 0; /* Prevent tabs from squishing */
+            flex-shrink: 0;
         }
         .tab {
             padding: 8px 16px;
@@ -172,7 +189,7 @@
 
         #preview-frame { width: 100%; height: 100%; border: none; background: white; display: none; }
         #console-output { 
-            flex: 1; /* Take remaining height */
+            flex: 1; 
             width: 100%; 
             background: #0d0d12; color: #0f0; 
             padding: 10px; font-family: monospace; font-size: 12px; 
@@ -180,10 +197,10 @@
             display: block;
         }
         
-        .log-rust { color: #dea584; border-left: 2px solid #dea584; padding-left: 5px; }
-        .log-js { color: #f7df1e; border-left: 2px solid #f7df1e; padding-left: 5px; }
-        .log-err { color: #ff5555; }
-        .log-sys { color: #666; font-style: italic; }
+        .log-rust { color: #dea584; border-left: 2px solid #dea584; padding-left: 5px; margin-bottom: 4px; }
+        .log-js { color: #f7df1e; border-left: 2px solid #f7df1e; padding-left: 5px; margin-bottom: 4px;}
+        .log-err { color: #ff5555; border-left: 2px solid #ff5555; padding-left: 5px; margin-bottom: 4px;}
+        .log-sys { color: #666; font-style: italic; margin-bottom: 4px;}
 
         .overlay {
             position: fixed; top:0; left:0; right:0; bottom:0;
@@ -212,7 +229,10 @@
         
         <!-- SIDEBAR -->
         <div id="sidebar">
-            <div class="sidebar-header">PROJECT FILES</div>
+            <div class="sidebar-header">
+                PROJECT FILES
+                <button class="btn-add" onclick="addNewFile()">+</button>
+            </div>
             <div id="file-list"></div>
             <div style="padding: 10px; margin-top:auto">
                 <button class="btn" style="width:100%; background:#333;" onclick="resetProject()">Reset Project</button>
@@ -245,8 +265,8 @@
         const defaultFiles = {
             'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Open Console tab to see results.</p>`,
             'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; }`,
-            'script.js': `// JavaScript Logic\nconsole.log("JS: Starting Loop...");\n\nlet count = 0;\nfor(let i=0; i<10; i++) {\n    count += i;\n}\n\nconsole.log("JS Result: " + count);`,
-            'main.rs': `// Rust Logic\nfn main() {\n    println!("Rust: Starting Loop...");\n    \n    let mut count = 0;\n    for i in 0..10 {\n        count += i;\n    }\n    \n    println!("Rust Result: {}", count);\n}`
+            'script.js': `// JavaScript Logic\nconsole.log('JS: Starting Loop...');\n\nlet count = 0;\nfor(let i=0; i<10; i++) {\n    count += i;\n}\n\nconsole.log('JS Result: ' + count);`,
+            'game.js': `// Example Game Logic\nconst CONFIG = {\n  lives: 3,\n  name: 'Hero'\n};\n\nconsole.log('Game Loaded: ' + CONFIG.name);`
         };
 
         let files = JSON.parse(localStorage.getItem('devquest_files')) || defaultFiles;
@@ -257,11 +277,12 @@
             loadFile(activeFileName);
         }
 
+        // --- FILE MANAGEMENT ---
         function renderFileList() {
             const list = document.getElementById('file-list');
             list.innerHTML = '';
             
-            Object.keys(files).forEach(name => {
+            Object.keys(files).sort().forEach(name => {
                 const item = document.createElement('div');
                 item.className = `file-item ${name === activeFileName ? 'active' : ''}`;
                 
@@ -271,10 +292,25 @@
                 if(name.endsWith('.js')) icon = '<span class="icon-js">●</span>';
                 if(name.endsWith('.rs')) icon = '<span class="icon-rs">●</span>';
 
-                item.innerHTML = `${icon} ${name}`;
+                item.innerHTML = `
+                    <div class="file-name">${icon} ${name}</div>
+                `;
                 item.onclick = () => loadFile(name);
                 list.appendChild(item);
             });
+        }
+
+        function addNewFile() {
+            const name = prompt("Enter file name (e.g., utils.js, logic.rs):");
+            if (name) {
+                if (files[name]) {
+                    alert("File already exists!");
+                    return;
+                }
+                files[name] = "// New File\n";
+                saveCurrentFile(); // Save currently open file first
+                loadFile(name);
+            }
         }
 
         function loadFile(name) {
@@ -285,6 +321,7 @@
             document.getElementById('current-file-badge').textContent = name;
             
             const convertBtn = document.getElementById('convert-btn');
+            // Only show port button for JS files
             if (name.endsWith('.js')) convertBtn.style.display = 'block';
             else convertBtn.style.display = 'none';
 
@@ -319,20 +356,38 @@
             }
         }
 
+        // --- SMARTER AUTO-PORT ---
         function convertJsToRust() {
             const jsCode = files[activeFileName];
             if (!activeFileName.endsWith('.js')) return;
 
-            let rsCode = "// Auto-Converted from JS\nfn main() {\n";
+            // 1. Determine new filename (e.g., game.js -> game.rs)
+            const newRsName = activeFileName.replace('.js', '.rs');
+
+            let rsCode = `// Auto-Ported from ${activeFileName}\n// Note: Browser APIs (window, navigator) are commented out.\n\nfn main() {\n`;
+            
             const lines = jsCode.split('\n');
             lines.forEach(line => {
                 let l = line.trim();
                 if(!l) return;
+
+                // --- FIX 1: Strings (Single to Double Quotes) ---
+                // Replace 'text' with "text", but ignore apostrophes inside words if possible
+                // This is a simple regex swap, might need manual adjustment for complex cases
+                l = l.replace(/'([^']*)'/g, '"$1"');
+
+                // --- FIX 2: Comment out Browser/DOM specifics ---
+                if (l.includes('window.') || l.includes('navigator.') || l.includes('document.') || l.includes('alert(')) {
+                    rsCode += `    // [DOM API] ${l}\n`;
+                    return;
+                }
                 
+                // --- Conversion Logic ---
                 if(l.startsWith('console.log')) {
                     const content = l.match(/console\.log\((.*)\)/);
                     if(content) {
-                        if(content[1].startsWith('"') || content[1].startsWith("'")) {
+                        // Check if printing a variable or string
+                        if(content[1].trim().startsWith('"')) {
                             rsCode += `    println!(${content[1]});\n`;
                         } else {
                             rsCode += `    println!("{:?}", ${content[1]});\n`;
@@ -340,8 +395,14 @@
                     }
                 }
                 else if(l.startsWith('let ') || l.startsWith('const ') || l.startsWith('var ')) {
-                    let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
-                    rsCode += `    ${parts}\n`;
+                    // Rust doesn't do "const object = {}" easily without structs. 
+                    // If it looks like an object start, comment it out.
+                    if (l.includes('={') || l.includes('= {')) {
+                         rsCode += `    // [TODO: Define Struct] ${l}\n`;
+                    } else {
+                        let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
+                        rsCode += `    ${parts}\n`;
+                    }
                 }
                 else if(l.startsWith('for')) {
                     if(l.includes('let i=0') && l.includes('i++')) {
@@ -349,10 +410,10 @@
                         if(range) {
                             rsCode += `    for i in 0..${range[1]} {\n`;
                         } else {
-                            rsCode += `    // Complex loop detected\n    ${l}\n`;
+                            rsCode += `    // Complex loop: ${l}\n`;
                         }
                     } else {
-                         rsCode += `    ${l} // Review Syntax\n`;
+                         rsCode += `    ${l} // Check Syntax\n`;
                     }
                 }
                 else if(l === '}') {
@@ -364,12 +425,14 @@
             });
             rsCode += "}\n";
 
-            files['main.rs'] = rsCode;
+            files[newRsName] = rsCode;
             localStorage.setItem('devquest_files', JSON.stringify(files));
-            alert("Conversion Complete! Check main.rs");
-            loadFile('main.rs');
+            
+            alert(`Ported to ${newRsName}!`);
+            loadFile(newRsName);
         }
 
+        // --- RUNNER ---
         function switchTab(tab) {
             document.getElementById('console-output').style.display = tab === 'console' ? 'block' : 'none';
             document.getElementById('preview-frame').style.display = tab === 'preview' ? 'block' : 'none';
@@ -381,16 +444,24 @@
 
         async function runProject() {
             const consoleDiv = document.getElementById('console-output');
+            
+            // RUN MODE: Depends on currently active file type
             let mode = activeFileName.endsWith('.rs') ? 'rust' : 'js';
             
-            if (mode === 'js') {
+            if (mode === 'js' || activeFileName.endsWith('.html')) {
+                // ... JS Logic (Same as before) ...
                 consoleDiv.innerHTML = '';
-                log("System", "Running JavaScript Environment...", "log-sys");
+                log("System", `Running Web Preview (${activeFileName})...`, "log-sys");
                 switchTab('preview'); 
                 
                 const html = files['index.html'] || '';
                 const css = files['style.css'] || '';
-                const js = files['script.js'] || '';
+                
+                // If running a specific JS file, inject IT. Otherwise inject script.js
+                let jsToRun = files['script.js'] || '';
+                if(activeFileName.endsWith('.js')) {
+                    jsToRun = files[activeFileName];
+                }
 
                 const combined = `
                     <html><style>${css}</style><body>${html}
@@ -403,15 +474,17 @@
                         };
                         window.onerror = (e) => console.log("Error: " + e);
                     <\/script>
-                    <script>try { ${js} } catch(e) { console.log(e); }<\/script>
+                    <script>try { ${jsToRun} } catch(e) { console.log(e); }<\/script>
                     </body></html>`;
                 document.getElementById('preview-frame').srcdoc = combined;
+
             } else {
+                // RUST LOGIC
                 consoleDiv.innerHTML = '';
-                log("System", "Compiling Rust (Remote)...", "log-sys");
+                log("System", `Compiling ${activeFileName} (Remote)...`, "log-sys");
                 switchTab('console'); 
                 
-                const rustCode = files['main.rs'];
+                const rustCode = files[activeFileName];
                 try {
                     const req = await fetch('https://play.rust-lang.org/execute', {
                         method: 'POST',
