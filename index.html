@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DevQuest Porting Station</title>
+    <title>DevQuest Auto-Port</title>
+    
+    <!-- PWA & MANIFEST LINKS -->
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d0d12">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <style>
         :root {
@@ -27,7 +31,7 @@
             background-color: var(--bg);
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
-            overflow: hidden; /* App-like feel */
+            overflow: hidden; 
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -74,7 +78,7 @@
 
         /* --- SIDEBAR (FILE EXPLORER) --- */
         #sidebar {
-            width: 200px;
+            width: 220px;
             background: #0a0a0e;
             border-right: var(--border);
             display: flex;
@@ -84,11 +88,11 @@
             position: absolute;
             z-index: 100;
             height: 100%;
-            transform: translateX(-100%); /* Hidden by default on mobile */
+            transform: translateX(-100%);
         }
         #sidebar.open { transform: translateX(0); }
         
-        .sidebar-header { padding: 10px 16px; font-weight: bold; color: #666; font-size: 12px; letter-spacing: 1px;}
+        .sidebar-header { padding: 10px 16px; font-weight: bold; color: #666; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;}
         
         .file-item {
             padding: 12px 16px;
@@ -162,9 +166,10 @@
             display: block;
         }
         
-        .log-rust { color: #dea584; }
-        .log-js { color: #f7df1e; }
+        .log-rust { color: #dea584; border-left: 2px solid #dea584; padding-left: 5px; }
+        .log-js { color: #f7df1e; border-left: 2px solid #f7df1e; padding-left: 5px; }
         .log-err { color: #ff5555; }
+        .log-sys { color: #666; font-style: italic; }
 
         /* Mobile overlay for sidebar */
         .overlay {
@@ -197,8 +202,8 @@
         <div id="sidebar">
             <div class="sidebar-header">PROJECT FILES</div>
             <div id="file-list"></div>
-            <div style="padding: 10px;">
-                <button class="btn" style="width:100%" onclick="resetProject()">Reset Project</button>
+            <div style="padding: 10px; margin-top:auto">
+                <button class="btn" style="width:100%; background:#333;" onclick="resetProject()">Reset Project</button>
             </div>
         </div>
 
@@ -211,15 +216,24 @@
     <!-- OUTPUT -->
     <div class="bottom-panel">
         <div class="panel-tabs">
-            <div class="tab active" onclick="switchTab('console')">Console</div>
-            <div class="tab" onclick="switchTab('preview')">Web Preview</div>
+            <div id="tab-console" class="tab active" onclick="switchTab('console')">Console</div>
+            <div id="tab-preview" class="tab" onclick="switchTab('preview')">Web Preview</div>
         </div>
         <div id="console-output"></div>
         <iframe id="preview-frame"></iframe>
     </div>
 
     <script>
-        // --- VIRTUAL FILE SYSTEM ---
+        // --- 1. PWA SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW fail', err));
+            });
+        }
+
+        // --- 2. VIRTUAL FILE SYSTEM ---
         const defaultFiles = {
             'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Open Console tab to see results.</p>`,
             'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; }`,
@@ -320,7 +334,6 @@
                 if(l.startsWith('console.log')) {
                     const content = l.match(/console\.log\((.*)\)/);
                     if(content) {
-                        // Check if it's a variable or string
                         if(content[1].startsWith('"') || content[1].startsWith("'")) {
                             rsCode += `    println!(${content[1]});\n`;
                         } else {
@@ -328,20 +341,19 @@
                         }
                     }
                 }
-                // 2. Variables (let/const -> let mut/let)
-                else if(l.startsWith('let ') || l.startsWith('const ')) {
+                // 2. Variables (let/const -> let mut)
+                else if(l.startsWith('let ') || l.startsWith('const ') || l.startsWith('var ')) {
                     let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
                     rsCode += `    ${parts}\n`;
                 }
                 // 3. Loops (Basic for loop translation)
                 else if(l.startsWith('for')) {
-                    // Try to catch basic "for(let i=0; i<10; i++)"
                     if(l.includes('let i=0') && l.includes('i++')) {
                         const range = l.match(/i<(\d+)/);
                         if(range) {
                             rsCode += `    for i in 0..${range[1]} {\n`;
                         } else {
-                            rsCode += `    // Complex loop detected (Manual fix needed)\n    ${l}\n`;
+                            rsCode += `    // Complex loop detected\n    ${l}\n`;
                         }
                     } else {
                          rsCode += `    ${l} // Review Syntax\n`;
@@ -359,7 +371,6 @@
 
             rsCode += "}\n";
 
-            // Save to main.rs
             files['main.rs'] = rsCode;
             localStorage.setItem('devquest_files', JSON.stringify(files));
             
@@ -373,19 +384,20 @@
             document.getElementById('preview-frame').style.display = tab === 'preview' ? 'block' : 'none';
             
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            if(tab === 'console') document.getElementById('tab-console').classList.add('active');
+            if(tab === 'preview') document.getElementById('tab-preview').classList.add('active');
         }
 
         async function runProject() {
             const consoleDiv = document.getElementById('console-output');
-            consoleDiv.innerHTML = '';
             
             // 1. Determine Logic Mode based on active file
             let mode = activeFileName.endsWith('.rs') ? 'rust' : 'js';
             
             if (mode === 'js') {
-                log("System", "Running JavaScript Environment...");
-                switchTab('preview'); // JS usually needs preview
+                consoleDiv.innerHTML = ''; // Clear for new run
+                log("System", "Running JavaScript Environment...", "log-sys");
+                switchTab('preview'); 
                 
                 const html = files['index.html'] || '';
                 const css = files['style.css'] || '';
@@ -415,8 +427,9 @@
                 document.getElementById('preview-frame').srcdoc = combined;
 
             } else {
-                log("System", "Compiling Rust (Remote)...");
-                switchTab('console'); // Rust needs console
+                consoleDiv.innerHTML = ''; // Clear for new run
+                log("System", "Compiling Rust (Remote)...", "log-sys");
+                switchTab('console'); 
                 
                 const rustCode = files['main.rs'];
                 
@@ -433,7 +446,7 @@
                     
                     if(res.success) {
                         log("Rust", res.stdout, "log-rust");
-                        if(res.stderr) log("System", res.stderr); // Warnings
+                        if(res.stderr) log("System", res.stderr, "log-sys");
                     } else {
                         log("Error", res.stderr, "log-err");
                     }
@@ -445,7 +458,10 @@
 
         function log(src, msg, cls = '') {
             const div = document.getElementById('console-output');
-            div.innerHTML += `<div class="${cls}">[${src}] ${msg}</div>`;
+            const line = document.createElement('div');
+            line.className = cls;
+            line.textContent = `[${src}] ${msg}`;
+            div.appendChild(line);
             div.scrollTop = div.scrollHeight;
         }
 
