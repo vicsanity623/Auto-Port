@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DevQuest Porting Station</title>
+    <meta name="theme-color" content="#0d0d12">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        :root {
+            --bg: #0d0d12;
+            --panel-bg: #161622;
+            --header-bg: rgba(22, 22, 34, 0.98);
+            --accent: #2979ff;
+            --rust-color: #dea584;
+            --js-color: #f7df1e;
+            --text-main: #e0e0e0;
+            --border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            overflow: hidden; /* App-like feel */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- HEADER --- */
+        header {
+            height: 60px;
+            background: var(--header-bg);
+            border-bottom: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            padding-top: env(safe-area-inset-top);
+            flex-shrink: 0;
+        }
+
+        .logo { font-weight: 800; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;}
+        .file-badge { font-size: 10px; background: #333; padding: 2px 6px; border-radius: 4px; color: #aaa; }
+        
+        .actions { display: flex; gap: 10px; }
+
+        .btn {
+            background: #222;
+            color: white;
+            border: var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-run { background: var(--accent); border: none; }
+        .btn-convert { background: linear-gradient(45deg, #f7df1e, #dea584); color: #000; border: none; }
+
+        /* --- LAYOUT --- */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- SIDEBAR (FILE EXPLORER) --- */
+        #sidebar {
+            width: 200px;
+            background: #0a0a0e;
+            border-right: var(--border);
+            display: flex;
+            flex-direction: column;
+            padding-top: 10px;
+            transition: transform 0.3s ease;
+            position: absolute;
+            z-index: 100;
+            height: 100%;
+            transform: translateX(-100%); /* Hidden by default on mobile */
+        }
+        #sidebar.open { transform: translateX(0); }
+        
+        .sidebar-header { padding: 10px 16px; font-weight: bold; color: #666; font-size: 12px; letter-spacing: 1px;}
+        
+        .file-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #aaa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 2px solid transparent;
+        }
+        .file-item:hover { background: #1f1f2e; }
+        .file-item.active { background: #161622; color: #fff; border-left-color: var(--accent); }
+        
+        .icon-html { color: #e44d26; }
+        .icon-css { color: #264de4; }
+        .icon-js { color: #f7df1e; }
+        .icon-rs { color: #dea584; }
+
+        /* --- EDITOR AREA --- */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+        }
+
+        textarea.code-editor {
+            flex: 1;
+            width: 100%;
+            background: #161622;
+            color: #dcdcdc;
+            border: none;
+            padding: 16px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+        }
+
+        /* --- BOTTOM PANEL (PREVIEW / CONSOLE) --- */
+        .bottom-panel {
+            height: 40%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            border-top: var(--border);
+            position: relative;
+        }
+
+        .panel-tabs {
+            display: flex;
+            background: #111;
+            border-bottom: 1px solid #333;
+        }
+        .tab {
+            padding: 8px 16px;
+            color: #888;
+            font-size: 12px;
+            cursor: pointer;
+            border-right: 1px solid #333;
+        }
+        .tab.active { background: #222; color: #fff; }
+
+        #preview-frame { width: 100%; height: 100%; border: none; background: white; display: none; }
+        #console-output { 
+            width: 100%; height: 100%; 
+            background: #0d0d12; color: #0f0; 
+            padding: 10px; font-family: monospace; font-size: 12px; 
+            overflow-y: auto; white-space: pre-wrap;
+            display: block;
+        }
+        
+        .log-rust { color: #dea584; }
+        .log-js { color: #f7df1e; }
+        .log-err { color: #ff5555; }
+
+        /* Mobile overlay for sidebar */
+        .overlay {
+            position: fixed; top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.5); z-index: 90;
+            display: none;
+        }
+        .overlay.show { display: block; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <button class="btn" onclick="toggleSidebar()">☰</button>
+            DevQuest <span id="current-file-badge" class="file-badge">script.js</span>
+        </div>
+        <div class="actions">
+            <!-- Only shows when JS is active -->
+            <button id="convert-btn" class="btn btn-convert" onclick="convertJsToRust()">⚡ Auto-Port</button>
+            <button class="btn btn-run" onclick="runProject()">▶ Run</button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+        
+        <!-- SIDEBAR -->
+        <div id="sidebar">
+            <div class="sidebar-header">PROJECT FILES</div>
+            <div id="file-list"></div>
+            <div style="padding: 10px;">
+                <button class="btn" style="width:100%" onclick="resetProject()">Reset Project</button>
+            </div>
+        </div>
+
+        <!-- EDITOR -->
+        <div class="editor-container">
+            <textarea id="editor" class="code-editor" spellcheck="false" oninput="saveCurrentFile()"></textarea>
+        </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="bottom-panel">
+        <div class="panel-tabs">
+            <div class="tab active" onclick="switchTab('console')">Console</div>
+            <div class="tab" onclick="switchTab('preview')">Web Preview</div>
+        </div>
+        <div id="console-output"></div>
+        <iframe id="preview-frame"></iframe>
+    </div>
+
+    <script>
+        // --- VIRTUAL FILE SYSTEM ---
+        const defaultFiles = {
+            'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Open Console tab to see results.</p>`,
+            'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; }`,
+            'script.js': `// JavaScript Logic\nconsole.log("JS: Starting Loop...");\n\nlet count = 0;\nfor(let i=0; i<10; i++) {\n    count += i;\n}\n\nconsole.log("JS Result: " + count);`,
+            'main.rs': `// Rust Logic\nfn main() {\n    println!("Rust: Starting Loop...");\n    \n    let mut count = 0;\n    for i in 0..10 {\n        count += i;\n    }\n    \n    println!("Rust Result: {}", count);\n}`
+        };
+
+        let files = JSON.parse(localStorage.getItem('devquest_files')) || defaultFiles;
+        let activeFileName = 'script.js';
+
+        // --- INIT ---
+        function init() {
+            renderFileList();
+            loadFile(activeFileName);
+        }
+
+        // --- FILE MANAGER ---
+        function renderFileList() {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            
+            Object.keys(files).forEach(name => {
+                const item = document.createElement('div');
+                item.className = `file-item ${name === activeFileName ? 'active' : ''}`;
+                
+                let icon = '📄';
+                if(name.endsWith('.html')) icon = '<span class="icon-html">●</span>';
+                if(name.endsWith('.css')) icon = '<span class="icon-css">●</span>';
+                if(name.endsWith('.js')) icon = '<span class="icon-js">●</span>';
+                if(name.endsWith('.rs')) icon = '<span class="icon-rs">●</span>';
+
+                item.innerHTML = `${icon} ${name}`;
+                item.onclick = () => loadFile(name);
+                list.appendChild(item);
+            });
+        }
+
+        function loadFile(name) {
+            // Save previous
+            if(files[activeFileName]) files[activeFileName] = document.getElementById('editor').value;
+            
+            activeFileName = name;
+            document.getElementById('editor').value = files[name];
+            document.getElementById('current-file-badge').textContent = name;
+            
+            // UI Toggles
+            const convertBtn = document.getElementById('convert-btn');
+            if (name.endsWith('.js')) convertBtn.style.display = 'block';
+            else convertBtn.style.display = 'none';
+
+            renderFileList();
+            toggleSidebar(false); // Close sidebar on selection
+        }
+
+        function saveCurrentFile() {
+            files[activeFileName] = document.getElementById('editor').value;
+            localStorage.setItem('devquest_files', JSON.stringify(files));
+        }
+
+        function resetProject() {
+            if(confirm("Reset all files to default?")) {
+                files = JSON.parse(JSON.stringify(defaultFiles));
+                localStorage.setItem('devquest_files', JSON.stringify(files));
+                loadFile('script.js');
+            }
+        }
+
+        // --- SIDEBAR UI ---
+        function toggleSidebar(force) {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('overlay');
+            const isOpen = sb.classList.contains('open');
+            
+            if (force === false || isOpen) {
+                sb.classList.remove('open');
+                ov.classList.remove('show');
+            } else {
+                sb.classList.add('open');
+                ov.classList.add('show');
+            }
+        }
+
+        // --- AI CONVERTER (HEURISTIC) ---
+        function convertJsToRust() {
+            const jsCode = files[activeFileName];
+            if (!activeFileName.endsWith('.js')) return;
+
+            // Simple "AI" Rules Engine
+            let rsCode = "// Auto-Converted from JS\n";
+            rsCode += "fn main() {\n";
+            
+            const lines = jsCode.split('\n');
+            lines.forEach(line => {
+                let l = line.trim();
+                if(!l) return;
+                
+                // 1. Console.log -> println!
+                if(l.startsWith('console.log')) {
+                    const content = l.match(/console\.log\((.*)\)/);
+                    if(content) {
+                        // Check if it's a variable or string
+                        if(content[1].startsWith('"') || content[1].startsWith("'")) {
+                            rsCode += `    println!(${content[1]});\n`;
+                        } else {
+                            rsCode += `    println!("{:?}", ${content[1]});\n`;
+                        }
+                    }
+                }
+                // 2. Variables (let/const -> let mut/let)
+                else if(l.startsWith('let ') || l.startsWith('const ')) {
+                    let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
+                    rsCode += `    ${parts}\n`;
+                }
+                // 3. Loops (Basic for loop translation)
+                else if(l.startsWith('for')) {
+                    // Try to catch basic "for(let i=0; i<10; i++)"
+                    if(l.includes('let i=0') && l.includes('i++')) {
+                        const range = l.match(/i<(\d+)/);
+                        if(range) {
+                            rsCode += `    for i in 0..${range[1]} {\n`;
+                        } else {
+                            rsCode += `    // Complex loop detected (Manual fix needed)\n    ${l}\n`;
+                        }
+                    } else {
+                         rsCode += `    ${l} // Review Syntax\n`;
+                    }
+                }
+                // 4. Closings
+                else if(l === '}') {
+                    rsCode += "    }\n";
+                }
+                // 5. Math
+                else {
+                    rsCode += `    ${l}\n`;
+                }
+            });
+
+            rsCode += "}\n";
+
+            // Save to main.rs
+            files['main.rs'] = rsCode;
+            localStorage.setItem('devquest_files', JSON.stringify(files));
+            
+            alert("Conversion Complete! Check main.rs");
+            loadFile('main.rs');
+        }
+
+        // --- RUNNER ---
+        function switchTab(tab) {
+            document.getElementById('console-output').style.display = tab === 'console' ? 'block' : 'none';
+            document.getElementById('preview-frame').style.display = tab === 'preview' ? 'block' : 'none';
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function runProject() {
+            const consoleDiv = document.getElementById('console-output');
+            consoleDiv.innerHTML = '';
+            
+            // 1. Determine Logic Mode based on active file
+            let mode = activeFileName.endsWith('.rs') ? 'rust' : 'js';
+            
+            if (mode === 'js') {
+                log("System", "Running JavaScript Environment...");
+                switchTab('preview'); // JS usually needs preview
+                
+                const html = files['index.html'] || '';
+                const css = files['style.css'] || '';
+                const js = files['script.js'] || '';
+
+                const combined = `
+                    <html>
+                    <style>${css}</style>
+                    <body>
+                        ${html}
+                        <script>
+                            // Console Interceptor
+                            const _log = console.log;
+                            console.log = (...args) => {
+                                _log(...args);
+                                const msg = args.map(a => String(a)).join(' ');
+                                window.parent.postMessage({type: 'log', msg: msg}, '*');
+                            };
+                            window.onerror = (e) => console.log("Error: " + e);
+                        <\/script>
+                        <script>
+                            try { ${js} } catch(e) { console.log(e); }
+                        <\/script>
+                    </body>
+                    </html>
+                `;
+                document.getElementById('preview-frame').srcdoc = combined;
+
+            } else {
+                log("System", "Compiling Rust (Remote)...");
+                switchTab('console'); // Rust needs console
+                
+                const rustCode = files['main.rs'];
+                
+                try {
+                    const req = await fetch('https://play.rust-lang.org/execute', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            channel: "stable", mode: "debug", edition: "2021", crateType: "bin", tests: false,
+                            code: rustCode
+                        })
+                    });
+                    const res = await req.json();
+                    
+                    if(res.success) {
+                        log("Rust", res.stdout, "log-rust");
+                        if(res.stderr) log("System", res.stderr); // Warnings
+                    } else {
+                        log("Error", res.stderr, "log-err");
+                    }
+                } catch(e) {
+                    log("Error", "Connection failed. " + e.message, "log-err");
+                }
+            }
+        }
+
+        function log(src, msg, cls = '') {
+            const div = document.getElementById('console-output');
+            div.innerHTML += `<div class="${cls}">[${src}] ${msg}</div>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        window.addEventListener('message', e => {
+            if(e.data.type === 'log') log("JS", e.data.msg, "log-js");
+        });
+
+        init();
+
+    </script>
+</body>
+</html>
