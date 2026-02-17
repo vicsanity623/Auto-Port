@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Ensure viewport-fit=cover is present for env() to work -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DevQuest Auto-Port</title>
     
-    <!-- PWA & MANIFEST LINKS -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d0d12">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,17 +37,22 @@
             flex-direction: column;
         }
 
-        /* --- HEADER --- */
+        /* --- HEADER FIXED --- */
         header {
-            height: 60px;
+            /* 60px PLUS the notch height */
+            height: calc(60px + env(safe-area-inset-top));
+            /* Push content down by the notch height */
+            padding-top: env(safe-area-inset-top); 
+            
             background: var(--header-bg);
             border-bottom: var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
-            padding-top: env(safe-area-inset-top);
+            padding-left: 16px;
+            padding-right: 16px;
             flex-shrink: 0;
+            z-index: 1000;
         }
 
         .logo { font-weight: 800; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;}
@@ -76,18 +81,22 @@
             position: relative;
         }
 
-        /* --- SIDEBAR (FILE EXPLORER) --- */
+        /* --- SIDEBAR FIXED --- */
         #sidebar {
             width: 220px;
             background: #0a0a0e;
             border-right: var(--border);
             display: flex;
             flex-direction: column;
-            padding-top: 10px;
+            
+            /* Add padding so "Project Files" isn't hidden by the notch if sidebar is tall */
+            padding-top: calc(10px + env(safe-area-inset-top)); 
+            
             transition: transform 0.3s ease;
             position: absolute;
             z-index: 100;
             height: 100%;
+            top: 0; /* Ensures it covers the top notch area */
             transform: translateX(-100%);
         }
         #sidebar.open { transform: translateX(0); }
@@ -133,7 +142,7 @@
             resize: none;
         }
 
-        /* --- BOTTOM PANEL (PREVIEW / CONSOLE) --- */
+        /* --- BOTTOM PANEL FIXED --- */
         .bottom-panel {
             height: 40%;
             background: #fff;
@@ -141,12 +150,16 @@
             flex-direction: column;
             border-top: var(--border);
             position: relative;
+            
+            /* Add padding for the Home Swipe Bar */
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .panel-tabs {
             display: flex;
             background: #111;
             border-bottom: 1px solid #333;
+            flex-shrink: 0; /* Prevent tabs from squishing */
         }
         .tab {
             padding: 8px 16px;
@@ -159,7 +172,8 @@
 
         #preview-frame { width: 100%; height: 100%; border: none; background: white; display: none; }
         #console-output { 
-            width: 100%; height: 100%; 
+            flex: 1; /* Take remaining height */
+            width: 100%; 
             background: #0d0d12; color: #0f0; 
             padding: 10px; font-family: monospace; font-size: 12px; 
             overflow-y: auto; white-space: pre-wrap;
@@ -171,7 +185,6 @@
         .log-err { color: #ff5555; }
         .log-sys { color: #666; font-style: italic; }
 
-        /* Mobile overlay for sidebar */
         .overlay {
             position: fixed; top:0; left:0; right:0; bottom:0;
             background: rgba(0,0,0,0.5); z-index: 90;
@@ -189,7 +202,6 @@
             DevQuest <span id="current-file-badge" class="file-badge">script.js</span>
         </div>
         <div class="actions">
-            <!-- Only shows when JS is active -->
             <button id="convert-btn" class="btn btn-convert" onclick="convertJsToRust()">⚡ Auto-Port</button>
             <button class="btn btn-run" onclick="runProject()">▶ Run</button>
         </div>
@@ -224,16 +236,12 @@
     </div>
 
     <script>
-        // --- 1. PWA SERVICE WORKER REGISTRATION ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW registered'))
-                    .catch(err => console.log('SW fail', err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW fail'));
             });
         }
 
-        // --- 2. VIRTUAL FILE SYSTEM ---
         const defaultFiles = {
             'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Open Console tab to see results.</p>`,
             'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; }`,
@@ -244,13 +252,11 @@
         let files = JSON.parse(localStorage.getItem('devquest_files')) || defaultFiles;
         let activeFileName = 'script.js';
 
-        // --- INIT ---
         function init() {
             renderFileList();
             loadFile(activeFileName);
         }
 
-        // --- FILE MANAGER ---
         function renderFileList() {
             const list = document.getElementById('file-list');
             list.innerHTML = '';
@@ -272,20 +278,18 @@
         }
 
         function loadFile(name) {
-            // Save previous
             if(files[activeFileName]) files[activeFileName] = document.getElementById('editor').value;
             
             activeFileName = name;
             document.getElementById('editor').value = files[name];
             document.getElementById('current-file-badge').textContent = name;
             
-            // UI Toggles
             const convertBtn = document.getElementById('convert-btn');
             if (name.endsWith('.js')) convertBtn.style.display = 'block';
             else convertBtn.style.display = 'none';
 
             renderFileList();
-            toggleSidebar(false); // Close sidebar on selection
+            toggleSidebar(false);
         }
 
         function saveCurrentFile() {
@@ -301,7 +305,6 @@
             }
         }
 
-        // --- SIDEBAR UI ---
         function toggleSidebar(force) {
             const sb = document.getElementById('sidebar');
             const ov = document.getElementById('overlay');
@@ -316,21 +319,16 @@
             }
         }
 
-        // --- AI CONVERTER (HEURISTIC) ---
         function convertJsToRust() {
             const jsCode = files[activeFileName];
             if (!activeFileName.endsWith('.js')) return;
 
-            // Simple "AI" Rules Engine
-            let rsCode = "// Auto-Converted from JS\n";
-            rsCode += "fn main() {\n";
-            
+            let rsCode = "// Auto-Converted from JS\nfn main() {\n";
             const lines = jsCode.split('\n');
             lines.forEach(line => {
                 let l = line.trim();
                 if(!l) return;
                 
-                // 1. Console.log -> println!
                 if(l.startsWith('console.log')) {
                     const content = l.match(/console\.log\((.*)\)/);
                     if(content) {
@@ -341,12 +339,10 @@
                         }
                     }
                 }
-                // 2. Variables (let/const -> let mut)
                 else if(l.startsWith('let ') || l.startsWith('const ') || l.startsWith('var ')) {
                     let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
                     rsCode += `    ${parts}\n`;
                 }
-                // 3. Loops (Basic for loop translation)
                 else if(l.startsWith('for')) {
                     if(l.includes('let i=0') && l.includes('i++')) {
                         const range = l.match(/i<(\d+)/);
@@ -359,26 +355,21 @@
                          rsCode += `    ${l} // Review Syntax\n`;
                     }
                 }
-                // 4. Closings
                 else if(l === '}') {
                     rsCode += "    }\n";
                 }
-                // 5. Math
                 else {
                     rsCode += `    ${l}\n`;
                 }
             });
-
             rsCode += "}\n";
 
             files['main.rs'] = rsCode;
             localStorage.setItem('devquest_files', JSON.stringify(files));
-            
             alert("Conversion Complete! Check main.rs");
             loadFile('main.rs');
         }
 
-        // --- RUNNER ---
         function switchTab(tab) {
             document.getElementById('console-output').style.display = tab === 'console' ? 'block' : 'none';
             document.getElementById('preview-frame').style.display = tab === 'preview' ? 'block' : 'none';
@@ -390,12 +381,10 @@
 
         async function runProject() {
             const consoleDiv = document.getElementById('console-output');
-            
-            // 1. Determine Logic Mode based on active file
             let mode = activeFileName.endsWith('.rs') ? 'rust' : 'js';
             
             if (mode === 'js') {
-                consoleDiv.innerHTML = ''; // Clear for new run
+                consoleDiv.innerHTML = '';
                 log("System", "Running JavaScript Environment...", "log-sys");
                 switchTab('preview'); 
                 
@@ -404,46 +393,34 @@
                 const js = files['script.js'] || '';
 
                 const combined = `
-                    <html>
-                    <style>${css}</style>
-                    <body>
-                        ${html}
-                        <script>
-                            // Console Interceptor
-                            const _log = console.log;
-                            console.log = (...args) => {
-                                _log(...args);
-                                const msg = args.map(a => String(a)).join(' ');
-                                window.parent.postMessage({type: 'log', msg: msg}, '*');
-                            };
-                            window.onerror = (e) => console.log("Error: " + e);
-                        <\/script>
-                        <script>
-                            try { ${js} } catch(e) { console.log(e); }
-                        <\/script>
-                    </body>
-                    </html>
-                `;
+                    <html><style>${css}</style><body>${html}
+                    <script>
+                        const _log = console.log;
+                        console.log = (...args) => {
+                            _log(...args);
+                            const msg = args.map(a => String(a)).join(' ');
+                            window.parent.postMessage({type: 'log', msg: msg}, '*');
+                        };
+                        window.onerror = (e) => console.log("Error: " + e);
+                    <\/script>
+                    <script>try { ${js} } catch(e) { console.log(e); }<\/script>
+                    </body></html>`;
                 document.getElementById('preview-frame').srcdoc = combined;
-
             } else {
-                consoleDiv.innerHTML = ''; // Clear for new run
+                consoleDiv.innerHTML = '';
                 log("System", "Compiling Rust (Remote)...", "log-sys");
                 switchTab('console'); 
                 
                 const rustCode = files['main.rs'];
-                
                 try {
                     const req = await fetch('https://play.rust-lang.org/execute', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            channel: "stable", mode: "debug", edition: "2021", crateType: "bin", tests: false,
-                            code: rustCode
+                            channel: "stable", mode: "debug", edition: "2021", crateType: "bin", tests: false, code: rustCode
                         })
                     });
                     const res = await req.json();
-                    
                     if(res.success) {
                         log("Rust", res.stdout, "log-rust");
                         if(res.stderr) log("System", res.stderr, "log-sys");
@@ -470,7 +447,6 @@
         });
 
         init();
-
     </script>
 </body>
 </html>
