@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DevQuest Auto-Port</title>
+    <title>DevQuest Station</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d0d12">
@@ -17,14 +17,16 @@
             --panel-bg: #161622;
             --header-bg: rgba(22, 22, 34, 0.98);
             --accent: #2979ff;
+            --danger: #ff4444;
             --rust-color: #dea584;
             --js-color: #f7df1e;
             --text-main: #e0e0e0;
             --border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; user-select: none; }
+        input, textarea { user-select: text; }
+
         body {
             margin: 0;
             background-color: var(--bg);
@@ -36,48 +38,63 @@
             flex-direction: column;
         }
 
-        /* --- HEADER FIXED --- */
+        /* --- HEADER --- */
         header {
-            height: calc(60px + env(safe-area-inset-top));
+            height: calc(50px + env(safe-area-inset-top));
             padding-top: env(safe-area-inset-top); 
             background: var(--header-bg);
             border-bottom: var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-left: 16px;
-            padding-right: 16px;
+            padding-left: 10px;
+            padding-right: 10px;
             flex-shrink: 0;
             z-index: 1000;
         }
 
-        .logo { font-weight: 800; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;}
-        .file-badge { font-size: 10px; background: #333; padding: 2px 6px; border-radius: 4px; color: #aaa; }
-        
-        .actions { display: flex; gap: 10px; }
+        .left-controls { display: flex; align-items: center; gap: 8px; }
+        .right-controls { display: flex; align-items: center; gap: 8px; }
 
+        /* --- TOGGLE SWITCH --- */
+        .toggle-wrapper {
+            background: #222;
+            border-radius: 6px;
+            padding: 2px;
+            display: flex;
+            border: var(--border);
+        }
+        .toggle-opt {
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+            transition: 0.2s;
+        }
+        .toggle-opt.active-js { background: var(--js-color); color: #000; }
+        .toggle-opt.active-rs { background: var(--rust-color); color: #000; }
+
+        /* --- BUTTONS --- */
         .btn {
             background: #222;
             color: white;
             border: var(--border);
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
             font-weight: 600;
             font-size: 12px;
             cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
         }
-        .btn-run { background: var(--accent); border: none; }
-        .btn-convert { background: linear-gradient(45deg, #f7df1e, #dea584); color: #000; border: none; }
+        .btn-run { background: var(--accent); border: none; min-width: 50px;}
+        .btn-stop { background: var(--danger); border: none; min-width: 30px; font-size: 10px; }
+        .btn-menu { font-size: 16px; border: none; background: transparent; padding: 0 5px;}
 
-        /* --- LAYOUT --- */
-        .workspace {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-        }
+        /* --- SIDEBAR --- */
+        .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-        /* --- SIDEBAR FIXED --- */
         #sidebar {
             width: 240px;
             background: #0a0a0e;
@@ -96,111 +113,89 @@
         
         .sidebar-header { 
             padding: 10px 16px; 
-            font-weight: bold; 
-            color: #666; 
-            font-size: 11px; 
-            letter-spacing: 1px; 
+            font-weight: bold; color: #888; font-size: 11px; 
+            display: flex; justify-content: space-between; align-items: center;
             text-transform: uppercase;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .btn-add {
-            background: #1f1f2e;
-            border: 1px solid #333;
-            color: #fff;
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        
         .file-item {
-            padding: 12px 16px;
+            padding: 14px 16px;
             font-size: 14px;
             color: #aaa;
             cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 8px;
             border-left: 2px solid transparent;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
         }
-        .file-item:hover { background: #1f1f2e; }
+        .file-item:active { background: #1f1f2e; }
         .file-item.active { background: #161622; color: #fff; border-left-color: var(--accent); }
-        .file-name { display: flex; align-items: center; gap: 8px; }
         
-        .icon-html { color: #e44d26; }
-        .icon-css { color: #264de4; }
-        .icon-js { color: #f7df1e; }
-        .icon-rs { color: #dea584; }
+        .icon-html { color: #e44d26; margin-right: 8px;}
+        .icon-css { color: #264de4; margin-right: 8px;}
+        .icon-js { color: #f7df1e; margin-right: 8px;}
+        .icon-rs { color: #dea584; margin-right: 8px;}
 
-        /* --- EDITOR AREA --- */
-        .editor-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #1e1e1e;
+        /* --- CONTEXT MENU (Mobile Sheet) --- */
+        #context-menu {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #1a1a24;
+            border-top: 1px solid #333;
+            border-radius: 12px 12px 0 0;
+            z-index: 200;
+            transform: translateY(100%);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding-bottom: env(safe-area-inset-bottom);
         }
-
-        textarea.code-editor {
-            flex: 1;
-            width: 100%;
-            background: #161622;
-            color: #dcdcdc;
-            border: none;
+        #context-menu.show { transform: translateY(0); }
+        
+        .ctx-header { padding: 15px; text-align: center; color: #666; font-size: 12px; border-bottom: 1px solid #222; }
+        .ctx-item {
             padding: 16px;
+            text-align: center;
+            font-size: 16px;
+            color: #fff;
+            border-bottom: 1px solid #222;
+        }
+        .ctx-item:active { background: #333; }
+        .ctx-delete { color: #ff4444; font-weight: bold; }
+
+        /* --- EDITOR --- */
+        .editor-container { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; }
+        textarea.code-editor {
+            flex: 1; width: 100%; background: #161622; color: #dcdcdc;
+            border: none; padding: 16px;
             font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            resize: none;
+            font-size: 13px; line-height: 1.5; resize: none;
         }
 
-        /* --- BOTTOM PANEL FIXED --- */
+        /* --- BOTTOM PANEL --- */
         .bottom-panel {
             height: 40%;
             background: #fff;
             display: flex;
             flex-direction: column;
             border-top: var(--border);
-            position: relative;
             padding-bottom: env(safe-area-inset-bottom);
         }
-
-        .panel-tabs {
-            display: flex;
-            background: #111;
-            border-bottom: 1px solid #333;
-            flex-shrink: 0;
-        }
+        .panel-tabs { display: flex; background: #111; border-bottom: 1px solid #333; flex-shrink: 0; }
         .tab {
-            padding: 8px 16px;
-            color: #888;
-            font-size: 12px;
-            cursor: pointer;
-            border-right: 1px solid #333;
+            padding: 8px 16px; color: #888; font-size: 12px; cursor: pointer; border-right: 1px solid #333;
         }
         .tab.active { background: #222; color: #fff; }
 
         #preview-frame { width: 100%; height: 100%; border: none; background: white; display: none; }
         #console-output { 
-            flex: 1; 
-            width: 100%; 
-            background: #0d0d12; color: #0f0; 
+            flex: 1; width: 100%; background: #0d0d12; color: #0f0; 
             padding: 10px; font-family: monospace; font-size: 12px; 
-            overflow-y: auto; white-space: pre-wrap;
-            display: block;
+            overflow-y: auto; white-space: pre-wrap; display: block;
         }
         
-        .log-rust { color: #dea584; border-left: 2px solid #dea584; padding-left: 5px; margin-bottom: 4px; }
-        .log-js { color: #f7df1e; border-left: 2px solid #f7df1e; padding-left: 5px; margin-bottom: 4px;}
-        .log-err { color: #ff5555; border-left: 2px solid #ff5555; padding-left: 5px; margin-bottom: 4px;}
-        .log-sys { color: #666; font-style: italic; margin-bottom: 4px;}
+        .log-rust { color: #dea584; border-left: 2px solid #dea584; padding-left: 5px; margin: 4px 0;}
+        .log-js { color: #f7df1e; border-left: 2px solid #f7df1e; padding-left: 5px; margin: 4px 0;}
+        .log-err { color: #ff5555; border-left: 2px solid #ff5555; padding-left: 5px; margin: 4px 0;}
+        .log-sys { color: #666; font-style: italic; margin: 4px 0;}
 
         .overlay {
             position: fixed; top:0; left:0; right:0; bottom:0;
@@ -214,28 +209,40 @@
 <body>
 
     <header>
-        <div class="logo">
-            <button class="btn" onclick="toggleSidebar()">☰</button>
-            DevQuest <span id="current-file-badge" class="file-badge">script.js</span>
+        <div class="left-controls">
+            <button class="btn btn-menu" onclick="toggleSidebar()">☰</button>
+            
+            <!-- LOGIC TOGGLE -->
+            <div class="toggle-wrapper">
+                <div id="tog-js" class="toggle-opt active-js" onclick="setLogicMode('js')">JS</div>
+                <div id="tog-rs" class="toggle-opt" onclick="setLogicMode('rust')">RS</div>
+            </div>
         </div>
-        <div class="actions">
-            <button id="convert-btn" class="btn btn-convert" onclick="convertJsToRust()">⚡ Auto-Port</button>
+
+        <div class="right-controls">
+            <!-- CONVERT BTN (Only shows for JS files) -->
+            <button id="convert-btn" class="btn" style="display:none;" onclick="convertJsToRust()">⚡</button>
+            
+            <!-- STOP BUTTON -->
+            <button class="btn btn-stop" onclick="stopProject()">■</button>
+            
+            <!-- RUN BUTTON -->
             <button class="btn btn-run" onclick="runProject()">▶ Run</button>
         </div>
     </header>
 
     <div class="workspace">
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+        <div class="overlay" id="overlay" onclick="closeAllMenus()"></div>
         
         <!-- SIDEBAR -->
         <div id="sidebar">
             <div class="sidebar-header">
                 PROJECT FILES
-                <button class="btn-add" onclick="addNewFile()">+</button>
+                <div class="btn" style="padding:2px 8px" onclick="addNewFile()">+</div>
             </div>
             <div id="file-list"></div>
             <div style="padding: 10px; margin-top:auto">
-                <button class="btn" style="width:100%; background:#333;" onclick="resetProject()">Reset Project</button>
+                <button class="btn" style="width:100%; background:#333;" onclick="resetProject()">Reset Defaults</button>
             </div>
         </div>
 
@@ -243,6 +250,15 @@
         <div class="editor-container">
             <textarea id="editor" class="code-editor" spellcheck="false" oninput="saveCurrentFile()"></textarea>
         </div>
+    </div>
+
+    <!-- CONTEXT MENU (Hidden) -->
+    <div id="context-menu">
+        <div class="ctx-header" id="ctx-title">Options</div>
+        <div class="ctx-item" onclick="ctxAction('duplicate')">Duplicate File</div>
+        <div class="ctx-item" onclick="ctxAction('rename')">Rename</div>
+        <div class="ctx-item ctx-delete" onclick="ctxAction('delete')">Delete</div>
+        <div class="ctx-item" onclick="closeAllMenus()" style="color:#888; padding-bottom: 30px;">Cancel</div>
     </div>
 
     <!-- OUTPUT -->
@@ -256,28 +272,48 @@
     </div>
 
     <script>
+        // --- SERVICE WORKER ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(err => console.log('SW fail'));
             });
         }
 
+        // --- STATE ---
         const defaultFiles = {
-            'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Open Console tab to see results.</p>`,
-            'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; }`,
-            'script.js': `// JavaScript Logic\nconsole.log('JS: Starting Loop...');\n\nlet count = 0;\nfor(let i=0; i<10; i++) {\n    count += i;\n}\n\nconsole.log('JS Result: ' + count);`,
-            'game.js': `// Example Game Logic\nconst CONFIG = {\n  lives: 3,\n  name: 'Hero'\n};\n\nconsole.log('Game Loaded: ' + CONFIG.name);`
+            'index.html': `<h1>JS vs Rust Logic Test</h1>\n<p>Use the toggle at top to switch logic engine.</p>`,
+            'style.css': `body { background: #f0f0f0; font-family: sans-serif; padding: 20px; text-align: center; }`,
+            'script.js': `// JS Logic\nconsole.log('JS: Running...');\n\nlet count = 0;\nsetInterval(() => {\n  count++;\n  console.log('JS Count: ' + count);\n}, 1000);`,
+            'script.rs': `// Rust Logic\nfn main() {\n    println!("Rust: Running Logic...");\n    \n    let mut count = 0;\n    for i in 0..5 {\n        count += 1;\n        println!("Rust Count: {}", count);\n    }\n}`
         };
 
         let files = JSON.parse(localStorage.getItem('devquest_files')) || defaultFiles;
         let activeFileName = 'script.js';
+        let logicMode = 'js'; // 'js' or 'rust'
+        let ctxTargetFile = null;
 
+        // --- INIT ---
         function init() {
             renderFileList();
             loadFile(activeFileName);
         }
 
-        // --- FILE MANAGEMENT ---
+        // --- LOGIC TOGGLE ---
+        function setLogicMode(mode) {
+            logicMode = mode;
+            const jsBtn = document.getElementById('tog-js');
+            const rsBtn = document.getElementById('tog-rs');
+            
+            if(mode === 'js') {
+                jsBtn.classList.add('active-js');
+                rsBtn.classList.remove('active-rs');
+            } else {
+                rsBtn.classList.add('active-rs');
+                jsBtn.classList.remove('active-js');
+            }
+        }
+
+        // --- FILE SYSTEM ---
         function renderFileList() {
             const list = document.getElementById('file-list');
             list.innerHTML = '';
@@ -286,47 +322,109 @@
                 const item = document.createElement('div');
                 item.className = `file-item ${name === activeFileName ? 'active' : ''}`;
                 
-                let icon = '📄';
+                let icon = '';
                 if(name.endsWith('.html')) icon = '<span class="icon-html">●</span>';
-                if(name.endsWith('.css')) icon = '<span class="icon-css">●</span>';
-                if(name.endsWith('.js')) icon = '<span class="icon-js">●</span>';
-                if(name.endsWith('.rs')) icon = '<span class="icon-rs">●</span>';
+                else if(name.endsWith('.css')) icon = '<span class="icon-css">●</span>';
+                else if(name.endsWith('.js')) icon = '<span class="icon-js">●</span>';
+                else if(name.endsWith('.rs')) icon = '<span class="icon-rs">●</span>';
+                else icon = '📄 ';
 
-                item.innerHTML = `
-                    <div class="file-name">${icon} ${name}</div>
-                `;
+                item.innerHTML = `<div>${icon} ${name}</div>`;
+                
+                // CLICK to load
                 item.onclick = () => loadFile(name);
+                
+                // LONG PRESS for Menu
+                addLongPressEvent(item, name);
+
                 list.appendChild(item);
             });
         }
 
-        function addNewFile() {
-            const name = prompt("Enter file name (e.g., utils.js, logic.rs):");
-            if (name) {
-                if (files[name]) {
-                    alert("File already exists!");
-                    return;
+        // --- LONG PRESS LOGIC ---
+        function addLongPressEvent(el, fileName) {
+            let timer;
+            
+            const start = (e) => {
+                timer = setTimeout(() => {
+                    openContextMenu(fileName);
+                }, 600); // 600ms long press
+            };
+            
+            const end = () => clearTimeout(timer);
+            
+            el.addEventListener('touchstart', start, {passive: true});
+            el.addEventListener('touchend', end);
+            el.addEventListener('touchmove', end);
+            // Desktop support
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', end);
+            el.addEventListener('mouseleave', end);
+        }
+
+        function openContextMenu(name) {
+            ctxTargetFile = name;
+            document.getElementById('ctx-title').innerText = name;
+            document.getElementById('overlay').classList.add('show');
+            document.getElementById('context-menu').classList.add('show');
+            
+            // Close sidebar so menu is visible
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function ctxAction(action) {
+            if(!ctxTargetFile) return;
+            
+            if (action === 'delete') {
+                if(Object.keys(files).length <= 1) return alert("Cannot delete last file.");
+                delete files[ctxTargetFile];
+                if(activeFileName === ctxTargetFile) activeFileName = Object.keys(files)[0];
+            } 
+            else if (action === 'duplicate') {
+                let newName = ctxTargetFile.split('.')[0] + '_copy.' + ctxTargetFile.split('.')[1];
+                files[newName] = files[ctxTargetFile];
+            }
+            else if (action === 'rename') {
+                let newName = prompt("Rename to:", ctxTargetFile);
+                if(newName && newName !== ctxTargetFile) {
+                    files[newName] = files[ctxTargetFile];
+                    delete files[ctxTargetFile];
+                    if(activeFileName === ctxTargetFile) activeFileName = newName;
                 }
+            }
+            
+            localStorage.setItem('devquest_files', JSON.stringify(files));
+            renderFileList();
+            loadFile(activeFileName);
+            closeAllMenus();
+        }
+
+        function closeAllMenus() {
+            document.getElementById('overlay').classList.remove('show');
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('context-menu').classList.remove('show');
+        }
+
+        function addNewFile() {
+            const name = prompt("File name (e.g., game.js):");
+            if (name) {
+                if (files[name]) return alert("Exists!");
                 files[name] = "// New File\n";
-                saveCurrentFile(); // Save currently open file first
+                saveCurrentFile();
                 loadFile(name);
             }
         }
 
         function loadFile(name) {
             if(files[activeFileName]) files[activeFileName] = document.getElementById('editor').value;
-            
             activeFileName = name;
             document.getElementById('editor').value = files[name];
-            document.getElementById('current-file-badge').textContent = name;
             
+            // UI Update
             const convertBtn = document.getElementById('convert-btn');
-            // Only show port button for JS files
-            if (name.endsWith('.js')) convertBtn.style.display = 'block';
-            else convertBtn.style.display = 'none';
-
+            convertBtn.style.display = name.endsWith('.js') ? 'flex' : 'none';
+            
             renderFileList();
-            toggleSidebar(false);
         }
 
         function saveCurrentFile() {
@@ -334,105 +432,68 @@
             localStorage.setItem('devquest_files', JSON.stringify(files));
         }
 
-        function resetProject() {
-            if(confirm("Reset all files to default?")) {
-                files = JSON.parse(JSON.stringify(defaultFiles));
-                localStorage.setItem('devquest_files', JSON.stringify(files));
-                loadFile('script.js');
-            }
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
         }
 
-        function toggleSidebar(force) {
-            const sb = document.getElementById('sidebar');
-            const ov = document.getElementById('overlay');
-            const isOpen = sb.classList.contains('open');
-            
-            if (force === false || isOpen) {
-                sb.classList.remove('open');
-                ov.classList.remove('show');
-            } else {
-                sb.classList.add('open');
-                ov.classList.add('show');
-            }
-        }
-
-        // --- SMARTER AUTO-PORT ---
+        // --- CONVERTER ---
         function convertJsToRust() {
             const jsCode = files[activeFileName];
-            if (!activeFileName.endsWith('.js')) return;
-
-            // 1. Determine new filename (e.g., game.js -> game.rs)
-            const newRsName = activeFileName.replace('.js', '.rs');
-
-            let rsCode = `// Auto-Ported from ${activeFileName}\n// Note: Browser APIs (window, navigator) are commented out.\n\nfn main() {\n`;
+            const newName = activeFileName.replace('.js', '.rs');
             
-            const lines = jsCode.split('\n');
-            lines.forEach(line => {
+            let rsCode = `// Auto-Ported from ${activeFileName}\nfn main() {\n`;
+            
+            jsCode.split('\n').forEach(line => {
                 let l = line.trim();
                 if(!l) return;
-
-                // --- FIX 1: Strings (Single to Double Quotes) ---
-                // Replace 'text' with "text", but ignore apostrophes inside words if possible
-                // This is a simple regex swap, might need manual adjustment for complex cases
+                
+                // Fix quotes
                 l = l.replace(/'([^']*)'/g, '"$1"');
 
-                // --- FIX 2: Comment out Browser/DOM specifics ---
-                if (l.includes('window.') || l.includes('navigator.') || l.includes('document.') || l.includes('alert(')) {
-                    rsCode += `    // [DOM API] ${l}\n`;
+                // DOM Protection
+                if (l.match(/(window\.|navigator\.|document\.|alert\()/)) {
+                    rsCode += `    // [DOM] ${l}\n`;
                     return;
                 }
-                
-                // --- Conversion Logic ---
+
                 if(l.startsWith('console.log')) {
-                    const content = l.match(/console\.log\((.*)\)/);
-                    if(content) {
-                        // Check if printing a variable or string
-                        if(content[1].trim().startsWith('"')) {
-                            rsCode += `    println!(${content[1]});\n`;
-                        } else {
-                            rsCode += `    println!("{:?}", ${content[1]});\n`;
-                        }
+                    const m = l.match(/console\.log\((.*)\)/);
+                    if(m) {
+                        if(m[1].trim().startsWith('"')) rsCode += `    println!(${m[1]});\n`;
+                        else rsCode += `    println!("{:?}", ${m[1]});\n`;
                     }
                 }
-                else if(l.startsWith('let ') || l.startsWith('const ') || l.startsWith('var ')) {
-                    // Rust doesn't do "const object = {}" easily without structs. 
-                    // If it looks like an object start, comment it out.
-                    if (l.includes('={') || l.includes('= {')) {
-                         rsCode += `    // [TODO: Define Struct] ${l}\n`;
-                    } else {
-                        let parts = l.replace('const ', 'let ').replace('let ', 'let mut ').replace('var ', 'let mut ');
-                        rsCode += `    ${parts}\n`;
-                    }
+                else if(l.startsWith('let') || l.startsWith('const') || l.startsWith('var')) {
+                     if (l.includes('={')) rsCode += `    // [Struct?] ${l}\n`;
+                     else rsCode += `    ${l.replace(/(const|var)/, 'let').replace('let', 'let mut')}\n`;
                 }
                 else if(l.startsWith('for')) {
-                    if(l.includes('let i=0') && l.includes('i++')) {
-                        const range = l.match(/i<(\d+)/);
-                        if(range) {
-                            rsCode += `    for i in 0..${range[1]} {\n`;
-                        } else {
-                            rsCode += `    // Complex loop: ${l}\n`;
-                        }
-                    } else {
-                         rsCode += `    ${l} // Check Syntax\n`;
-                    }
+                     if(l.includes('let i=0')) rsCode += `    for i in 0..10 {\n`; // Simplified
+                     else rsCode += `    ${l}\n`;
                 }
-                else if(l === '}') {
-                    rsCode += "    }\n";
-                }
-                else {
-                    rsCode += `    ${l}\n`;
-                }
+                else if(l === '}') rsCode += "    }\n";
+                else rsCode += `    ${l}\n`;
             });
             rsCode += "}\n";
-
-            files[newRsName] = rsCode;
-            localStorage.setItem('devquest_files', JSON.stringify(files));
             
-            alert(`Ported to ${newRsName}!`);
-            loadFile(newRsName);
+            files[newName] = rsCode;
+            saveCurrentFile();
+            alert("Ported to " + newName);
+            loadFile(newName);
         }
 
-        // --- RUNNER ---
+        // --- RUNNER & STOPPER ---
+        function stopProject() {
+            // Kill iframe
+            const iframe = document.getElementById('preview-frame');
+            iframe.srcdoc = '';
+            
+            // Clear Console
+            document.getElementById('console-output').innerHTML = '';
+            log("System", "Process Terminated.", "log-err");
+        }
+
         function switchTab(tab) {
             document.getElementById('console-output').style.display = tab === 'console' ? 'block' : 'none';
             document.getElementById('preview-frame').style.display = tab === 'preview' ? 'block' : 'none';
@@ -442,26 +503,29 @@
             if(tab === 'preview') document.getElementById('tab-preview').classList.add('active');
         }
 
+        function resetProject() {
+            if(confirm("Reset Everything?")) {
+                localStorage.removeItem('devquest_files');
+                location.reload();
+            }
+        }
+
         async function runProject() {
             const consoleDiv = document.getElementById('console-output');
+            consoleDiv.innerHTML = ''; // Auto-clear on run
             
-            // RUN MODE: Depends on currently active file type
-            let mode = activeFileName.endsWith('.rs') ? 'rust' : 'js';
-            
-            if (mode === 'js' || activeFileName.endsWith('.html')) {
-                // ... JS Logic (Same as before) ...
-                consoleDiv.innerHTML = '';
-                log("System", `Running Web Preview (${activeFileName})...`, "log-sys");
-                switchTab('preview'); 
+            // 1. JS MODE
+            if (logicMode === 'js') {
+                log("System", "Starting JS Environment...", "log-sys");
+                switchTab('preview');
+                
+                // Find main JS file (either active one if JS, or script.js)
+                let jsKey = activeFileName.endsWith('.js') ? activeFileName : 'script.js';
+                if(!files[jsKey]) jsKey = Object.keys(files).find(k => k.endsWith('.js'));
                 
                 const html = files['index.html'] || '';
                 const css = files['style.css'] || '';
-                
-                // If running a specific JS file, inject IT. Otherwise inject script.js
-                let jsToRun = files['script.js'] || '';
-                if(activeFileName.endsWith('.js')) {
-                    jsToRun = files[activeFileName];
-                }
+                const js = files[jsKey] || '';
 
                 const combined = `
                     <html><style>${css}</style><body>${html}
@@ -469,39 +533,55 @@
                         const _log = console.log;
                         console.log = (...args) => {
                             _log(...args);
-                            const msg = args.map(a => String(a)).join(' ');
-                            window.parent.postMessage({type: 'log', msg: msg}, '*');
+                            window.parent.postMessage({type: 'log', msg: args.join(' ')}, '*');
                         };
-                        window.onerror = (e) => console.log("Error: " + e);
+                        window.onerror = (e) => console.log("Err: " + e);
                     <\/script>
-                    <script>try { ${jsToRun} } catch(e) { console.log(e); }<\/script>
+                    <script>${js}<\/script>
                     </body></html>`;
-                document.getElementById('preview-frame').srcdoc = combined;
-
-            } else {
-                // RUST LOGIC
-                consoleDiv.innerHTML = '';
-                log("System", `Compiling ${activeFileName} (Remote)...`, "log-sys");
-                switchTab('console'); 
                 
-                const rustCode = files[activeFileName];
+                document.getElementById('preview-frame').srcdoc = combined;
+            } 
+            
+            // 2. RUST MODE
+            else {
+                log("System", "Compiling Rust (Remote)...", "log-sys");
+                
+                // Show static HTML (Visuals) but NO JS
+                const html = files['index.html'] || '';
+                const css = files['style.css'] || '';
+                document.getElementById('preview-frame').srcdoc = `<html><style>${css}</style><body>${html}</body></html>`;
+                
+                // Force Console View so user sees output
+                switchTab('console');
+
+                // Find main RS file
+                let rsKey = activeFileName.endsWith('.rs') ? activeFileName : 'main.rs';
+                if(!files[rsKey]) rsKey = Object.keys(files).find(k => k.endsWith('.rs'));
+
+                if(!rsKey || !files[rsKey]) {
+                    log("Error", "No .rs file found. Please port or create one.", "log-err");
+                    return;
+                }
+
                 try {
                     const req = await fetch('https://play.rust-lang.org/execute', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            channel: "stable", mode: "debug", edition: "2021", crateType: "bin", tests: false, code: rustCode
+                            channel: "stable", mode: "debug", edition: "2021", crateType: "bin", tests: false, 
+                            code: files[rsKey]
                         })
                     });
                     const res = await req.json();
                     if(res.success) {
                         log("Rust", res.stdout, "log-rust");
-                        if(res.stderr) log("System", res.stderr, "log-sys");
+                        if(res.stderr) log("Warn", res.stderr, "log-sys");
                     } else {
                         log("Error", res.stderr, "log-err");
                     }
                 } catch(e) {
-                    log("Error", "Connection failed. " + e.message, "log-err");
+                    log("Error", "Network Error: " + e.message, "log-err");
                 }
             }
         }
