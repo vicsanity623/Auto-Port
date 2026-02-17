@@ -1,4 +1,4 @@
-const CACHE_NAME = 'devqwst-v0.0.1';
+const CACHE_NAME = 'devqwst-v0.0.1a';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
